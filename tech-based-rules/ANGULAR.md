@@ -3,6 +3,7 @@
 Conventions for AI agents working in this Angular codebase. This is a reusable, future-proof baseline for modern Angular projects.
 
 **Ground rules:**
+
 1. **The tooling is the source of truth.** ESLint, Prettier, and `tsconfig.json` define the enforceable rules. When in doubt, run the linter and fix what it reports. Never introduce a pattern that fails `ng lint`.
 2. **Always target the latest stable Angular.** See Versioning below — do not assume a fixed version number.
 3. **Fill in "Project Settings" per project.** Everything else is framework-level guidance that holds regardless of project.
@@ -11,7 +12,7 @@ Conventions for AI agents working in this Angular codebase. This is a reusable, 
 
 - **Always build on the latest stable Angular release**, with a Node and TypeScript version compatible with it. Do not pin to an older major out of habit.
 - At project start, check the current stable version (e.g. `npm view @angular/core version`, or the official Angular releases page) and scaffold with the matching CLI (`npm create @angular@latest` / `ng new`). When upgrading, use `ng update`, not manual edits.
-- Treat the **current version's recommended/default features as the baseline**: standalone components, the built-in control flow (`@if` / `@for` / `@switch`), the `inject()` function, and signals. Angular is moving toward zoneless change detection and OnPush-by-default — follow the conventions of the version you are on, and verify specifics against the official docs for that version rather than assuming.
+- Treat the **current version's recommended/default features as the baseline**: standalone components, the built-in control flow (`@if` / `@for` / `@switch`), and the `inject()` function. Exception: **signals are not used in this baseline** (see Component Conventions) — reactive state is handled with observables. Verify version specifics against the official docs rather than assuming.
 - Keep dependencies on a supported (non-EOL) major; Angular majors get ~18 months of support.
 
 ## Project Settings (fill in per project)
@@ -20,7 +21,7 @@ Conventions for AI agents working in this Angular codebase. This is a reusable, 
 
 - **Package manager:** `<npm | pnpm | yarn>`.
 - **Styling:** `<SCSS | CSS>` + UI library `<none | Angular Material | ... >`. (Light + dark theming is standard — see Styling & Theming.)
-- **State approach:** `<signals | RxJS services | NgRx | mixed>` — pick one and apply consistently.
+- **State approach:** `<RxJS services | NgRx>` — pick one and apply consistently. Signals are not used (see Component Conventions).
 - **Change detection:** `<OnPush everywhere | framework default>`.
 - **Routing:** `<path location | hash location>`, lazy loading `<yes | no>`.
 - **i18n:** library `<@ngx-translate | @angular/localize>` + supported languages `<e.g. en, tr>`, default/fallback `<e.g. en>`. (Multi-language is standard — see Internationalization.)
@@ -34,6 +35,8 @@ Conventions for AI agents working in this Angular codebase. This is a reusable, 
 - `ng lint` — lint TypeScript and templates.
 
 Adjust to the project's actual `package.json` scripts.
+
+Per [GENERAL-RULES.md](../GENERAL-RULES.md), agents do not run `npm` / `node` commands and do not start long-running processes (`ng serve`, watch modes). Give the user the exact command to run and ask them to run it; the same applies to the `npm view` / `ng new` commands in Versioning above.
 
 ## Project Structure
 
@@ -53,6 +56,7 @@ Keep a predictable, role-based layout under `src/app/`. A common shape:
 - A dedicated location for translation files (see Internationalization).
 
 Rules of placement:
+
 - Routed component → `pages/`. Generic reusable widget → `shared/`. Cross-cutting logic with no template → `core/`.
 - **Prefer extending an existing shared component over duplicating one.** If more functionality is needed, develop the existing component further rather than creating a near-copy.
 
@@ -60,9 +64,11 @@ Rules of placement:
 
 - Keep environment files minimal and parallel: `environment.ts` (**production / default**) and `environment.development.ts`. The Angular builder swaps them via `fileReplacements` in `angular.json` under the `development` configuration.
 - **Never import `environment.development.ts` directly.** Always import the base file; the build substitutes it:
+
   ```ts
   import { environment } from '../../environments/environment';
   ```
+
 - All environment files must export an object with **identical keys**. When you add a config value, add it to **every** environment file with the same key — otherwise the production build fails to type-check.
 - **Never hardcode API/socket/base URLs** in components or services; read them from `environment`.
 - Register application-wide providers (router, HTTP client + interceptors, i18n, etc.) in `app.config.ts`, not in individual components.
@@ -70,7 +76,7 @@ Rules of placement:
 
 ## Naming Conventions
 
-- **Files:** kebab-case with an Angular type suffix: `*.component.ts/.html/.scss/.spec.ts`, `*.service.ts`, `*.guard.ts`, `*.interceptor.ts`, `*.directive.ts`, `*.pipe.ts`, `*.resolver.ts`.
+- **Files:** kebab-case with an Angular type suffix: `*.component.ts/.html/.scss`, `*.service.ts`, `*.guard.ts`, `*.interceptor.ts`, `*.directive.ts`, `*.pipe.ts`, `*.resolver.ts`.
 - **Model/type files:** group related types per domain (e.g. `auth-models.ts`), rather than one file per interface.
 - **Classes / interfaces / enums / type aliases:** PascalCase. **Variables / properties / methods:** camelCase.
 - **Selectors:** component selectors are element-type, kebab-case, with a project prefix (e.g. `app-user-card`); directive selectors are attribute-type, camelCase, same prefix. Enforce the prefix via ESLint.
@@ -82,18 +88,22 @@ Rules of placement:
 - Always `standalone: true`. Declare every dependency in the component's `imports` array; do not rely on shared NgModules.
 - Use external `templateUrl` and `styleUrl` files (not inline) unless the template is trivial.
 - **Inject dependencies with the `inject()` function**, not constructor parameters:
+
   ```ts
   private userService = inject(UserService);
   ```
-- Choose **one** input/output style for the project and stick to it: either signal-based `input()` / `output()` (modern) or the `@Input()` / `@Output()` decorators. Do not mix.
-- Recommended: `changeDetection: ChangeDetectionStrategy.OnPush` for predictable, performant rendering (and as alignment with where Angular is heading).
+
+- **Do not use signals when creating components.** Use observables (RxJS) for reactive state, and manage change detection explicitly — inject `ChangeDetectorRef` and call `markForCheck()` / `detectChanges()` when needed.
+- Use the `@Input()` / `@Output()` decorators for inputs and outputs. Do not use the signal-based `input()` / `output()` functions.
+- Recommended: `changeDetection: ChangeDetectionStrategy.OnPush` for predictable, performant rendering — paired with the explicit `ChangeDetectorRef` handling above.
+- **Do not create `*.spec.ts` files.**
 - Keep components thin — data fetching and business logic live in services, not components. Put route-snapshot-dependent setup in the constructor and other init in `ngOnInit`.
 
 ## Services & State
 
 - Services are `@Injectable({ providedIn: 'root' })` singletons unless they are intentionally scoped.
 - Organize services by domain (API access, state, feature-specific).
-- Pick **one** state strategy (signals, RxJS subjects in a service, or NgRx) and apply it consistently; avoid parallel ad-hoc event channels.
+- Pick **one** state strategy (RxJS subjects/observables in a service, or NgRx) and apply it consistently; avoid parallel ad-hoc event channels. Signals are not used.
 - Always clean up subscriptions: prefer the `async` pipe in templates, or `takeUntilDestroyed()` / explicit teardown in code, to prevent leaks.
 
 ## Routing, Guards, Interceptors, Resolvers
@@ -130,6 +140,9 @@ Every project ships **both a light and a dark theme**. Build theming in from the
 - **Components reference tokens only; never hardcode colors or raw hex values.** This is what guarantees both themes work automatically. A component that reads from tokens needs no per-theme overrides.
 - Apply the active theme at the root via a class or `data-theme` attribute on `:root` / `<html>`, switched at runtime. Respect the user's OS preference with `prefers-color-scheme` as the initial default, and allow an explicit user toggle that persists.
 - Scope component styles with `:host` and the **direct-child combinator (`>`)**, using `&` nesting for states (`&:hover`). Component styles stay in that component's stylesheet.
+- **Do not use `::ng-deep`** (or any deprecated view-piercing selector). `:host` is allowed.
+- **No space between `>` and the class/element name** in selectors: `>.className`, not `> .className`.
+- **SCSS variable names use `camelCase`**, not kebab-case: `$colorTextDark`, not `$color-text-dark`.
 - The global stylesheet holds only global concerns (resets, base typography, keyframes, scrollbars) and the theme token definitions. Never put component-specific rules there.
 
 ## HTML / Templates
@@ -155,6 +168,10 @@ Every project ships **both a light and a dark theme**. Build theming in from the
 - Hardcode colors or raw hex in components (use theme tokens; both light and dark must work).
 - Hardcode API/socket URLs, import `environment.development.ts` directly, or add a config key to only some environment files.
 - Use `console.log`, `==`/`!=`, or leave subscriptions un-cleaned.
+- Use signals in components (use observables + explicit change detection via `ChangeDetectorRef`).
+- Use `::ng-deep` (use `:host` and component-scoped styles).
+- Create `*.spec.ts` files.
+- Write SCSS variables in kebab-case, or put a space after `>` in selectors.
 - Add new dependencies without explicit instruction.
 - Duplicate an existing shared component or bypass shared cross-cutting infrastructure (interceptors, dialog/notification/loading services).
 
@@ -162,7 +179,7 @@ Every project ships **both a light and a dark theme**. Build theming in from the
 
 1. `ng lint` passes with no errors.
 2. `ng build` (production) type-checks and succeeds — remember production env is the default, so missing env keys fail here.
-3. Existing tests pass (`ng test`); add/adjust `.spec.ts` for new logic where practical.
+3. No new `*.spec.ts` files were created; if the project has existing tests, they still pass (`ng test`, run by the user).
 4. New user-facing strings are added to **every** language file, routed through i18n (no hardcoded text).
 5. New/changed UI is verified in **both light and dark themes**, using theme tokens (no hardcoded colors).
 6. No hardcoded URLs, no `console.log`, no unintended new dependencies; built on a current, supported Angular version.

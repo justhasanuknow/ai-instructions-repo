@@ -4,6 +4,8 @@ A curated collection of instruction documents for AI agents (Claude Code, Cursor
 
 Each instruction file is a self-contained document that an agent can follow to complete a specific task class — from building a static website, to reviewing a pull request, to refactoring legacy code, to producing design briefs.
 
+> **For AI agents:** start at [AGENTS.md](AGENTS.md). It is the entry point that tells you which files to always read and which files apply to your task type. This README is written for humans.
+
 ## How It Works
 
 Each instruction file in this repo is designed to be:
@@ -23,8 +25,11 @@ Each instruction file in this repo is designed to be:
 ## Catalog
 
 | Instruction | Category | Use Case | Status |
-|---|---|---|---|
-| [static-site-template.md](static-site-template.md) | Web Development | Build a modern professional-service static website with dark/light mode, SEO, form, and bot protection | Stable |
+| --- | --- | --- | --- |
+| [PLAIN-STATIC-SITE-TEMPLATE.md](tech-based-rules/PLAIN-STATIC-SITE-TEMPLATE.md) | Web Development | Build a modern professional-service static website with dark/light mode, SEO, form, and bot protection | Stable |
+| [ANGULAR.md](tech-based-rules/ANGULAR.md) | Web Development | Framework-level conventions for AI agents working in modern Angular codebases (standalone, signals, i18n, theming) | Stable |
+| [GIT-RULES.md](GIT-RULES.md) | Workflow Safety | Define which git operations an AI agent may perform, which are user-only, and how conflict resolution is scoped | Stable |
+| [GENERAL-RULES.md](GENERAL-RULES.md) | Workflow Safety | Baseline agent rules for every task: conduct, formatting, command/database restrictions, and per-technology conventions | Stable |
 
 Planned categories: code review, refactor, design brief, content writing, data analysis, devops runbooks.
 
@@ -54,10 +59,15 @@ Not every instruction needs every section, but this is the standard skeleton.
 
 ## Repository Structure
 
-```
+```text
 /
-├── README.md                       # this file
-├── static-site-template.md         # web: professional-service site
+├── README.md                           # this file (for humans)
+├── AGENTS.md                           # entry point for AI agents (read first)
+├── GENERAL-RULES.md                    # baseline rules for every agent task
+├── GIT-RULES.md                        # workflow: git operation rules for AI agents
+├── tech-based-rules/                   # technology-specific instruction files
+│   ├── ANGULAR.md                      # web: Angular codebase conventions
+│   └── PLAIN-STATIC-SITE-TEMPLATE.md   # web: professional-service static site
 └── (future instructions)
 ```
 
@@ -67,7 +77,7 @@ Each file is self-contained — no shared imports. You can use any instruction i
 
 1. Pick a recurring task you'd like to standardize.
 2. Identify a public reference (live site, GitHub repo, documentation page) that demonstrates the desired output quality.
-3. Create `your-instruction-name.md` at the repository root, modeled on existing instructions.
+3. Create `your-instruction-name.md` in the matching category folder (e.g. `tech-based-rules/` for technology-specific conventions), or at the repository root for cross-cutting rules, modeled on existing instructions.
 4. Include the relevant sections from the "Anatomy" list. Skip what doesn't apply.
 5. Test the instruction with a fresh agent at least once, end-to-end.
 6. Add a row to the Catalog table above.
