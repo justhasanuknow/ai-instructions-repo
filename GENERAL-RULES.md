@@ -51,7 +51,8 @@ Do these at the beginning of every task, before writing anything:
 Full rules live in [GIT-RULES.md](GIT-RULES.md) — read that file for the complete operation lists and procedures. The core of it:
 
 - **Never perform git actions** (including `git add`, `git commit`, `git push`). Read-only inspection commands (`git status`, `git log`, `git diff`, etc.) are allowed.
-- If the user requests a git action, **inform them of this rule and give them the exact command to run themselves**.
+- **The same applies to the GitHub CLI.** `gh` commands that read (`gh repo view`, `gh pr list`, `gh api` without a method) are allowed; anything that writes to a remote — releases, pull requests, issues, repository settings, secrets, workflow runs — is user-only.
+- If the user requests a git or `gh` action, **inform them of this rule and give them the exact command to run themselves**.
 
 ---
 

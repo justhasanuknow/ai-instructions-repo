@@ -29,7 +29,7 @@ Each instruction file in this repo is designed to be:
 | [PLAIN-STATIC-SITE-TEMPLATE.md](tech-based-rules/PLAIN-STATIC-SITE-TEMPLATE.md) | Web Development | Build a modern professional-service static website with dark/light mode, SEO, form, and bot protection | Stable |
 | [SVELTEKIT-DIRECTUS-TEMPLATE.md](tech-based-rules/SVELTEKIT-DIRECTUS-TEMPLATE.md) | Web Development | Build a content-managed website with a hand-written SvelteKit frontend and Directus as the headless CMS | Draft |
 | [ANGULAR.md](tech-based-rules/ANGULAR.md) | Web Development | Framework-level conventions for AI agents working in modern Angular codebases (standalone, signals, i18n, theming) | Stable |
-| [GIT-RULES.md](GIT-RULES.md) | Workflow Safety | Define which git operations an AI agent may perform, which are user-only, and how conflict resolution is scoped | Stable |
+| [GIT-RULES.md](GIT-RULES.md) | Workflow Safety | Define which git and GitHub CLI operations an AI agent may perform, which are user-only, and how conflict resolution and user waivers are scoped | Stable |
 | [GENERAL-RULES.md](GENERAL-RULES.md) | Workflow Safety | Baseline agent rules for every task: conduct, formatting, command/database restrictions, and per-technology conventions | Stable |
 
 Planned categories: code review, refactor, design brief, content writing, data analysis, devops runbooks.

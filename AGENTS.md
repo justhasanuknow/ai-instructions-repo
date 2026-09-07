@@ -22,7 +22,7 @@ Do not skip step 2 because the task looks small. The always-read files contain s
 | File | What it defines |
 | --- | --- |
 | [GENERAL-RULES.md](GENERAL-RULES.md) | Baseline rules for every task: task startup checks, coding conduct (no comments, no emojis), formatting, command/environment restrictions (no npm/node/deno, no file deletion, no long-running processes), database restrictions, and per-technology conventions. |
-| [GIT-RULES.md](GIT-RULES.md) | Which git operations you may perform, which are strictly user-only, and how conflict resolution is scoped. Applies to every task in every repository. |
+| [GIT-RULES.md](GIT-RULES.md) | Which git and GitHub CLI (`gh`) operations you may perform, which are strictly user-only, how conflict resolution is scoped, and how a user waiver works. Applies to every task in every repository. |
 
 ## Read When Relevant (by task type)
 

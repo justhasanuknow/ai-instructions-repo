@@ -1,6 +1,6 @@
 # Git Rules for AI Agents
 
-This document defines exactly which git operations an AI agent is allowed to perform in a repository, which operations are forbidden, and which operations require an explicit user command. The goal is to prevent any agent-initiated action that could break the repository, alter its history, or change its state on a remote.
+This document defines exactly which git and GitHub CLI (`gh`) operations an AI agent is allowed to perform in a repository, which operations are forbidden, and which operations require an explicit user command. The goal is to prevent any agent-initiated action that could break the repository, alter its history, or change its state on a remote.
 
 These rules are written to be unambiguous. When in doubt, an agent must treat an operation as **forbidden** and ask the user instead of acting.
 
@@ -8,8 +8,8 @@ These rules are written to be unambiguous. When in doubt, an agent must treat an
 
 ## Core Principle
 
-> **An AI agent may only perform git operations that are read-only.**
-> Any operation that modifies the git tree, the commit history, the index, the working tree state, or a remote is outside the agent's authority unless this document explicitly says otherwise.
+> **An AI agent may only perform git and `gh` operations that are read-only.**
+> Any operation that modifies the git tree, the commit history, the index, the working tree state, or anything on a remote — including a repository's settings, releases, issues and pull requests — is outside the agent's authority unless this document explicitly says otherwise.
 
 "Read-only" means: after the command finishes, the repository is in exactly the same state as before the command ran. If a command does not satisfy this test, it is not read-only.
 
@@ -36,6 +36,20 @@ The agent may run these commands freely, at any time, without asking. They only 
 | `git shortlog`, `git count-objects`, `git merge-base` | Statistics and ancestry queries |
 
 **Rule of thumb:** if the command only prints information and changes nothing, it belongs in this category.
+
+### GitHub CLI (`gh`) — read-only
+
+The same test applies to `gh`. These commands report and change nothing.
+
+| Command | Purpose |
+| --- | --- |
+| `gh repo view` | Inspect repository metadata, visibility, topics, license |
+| `gh release list` / `gh release view` | Inspect releases and their notes |
+| `gh pr list` / `gh pr view` / `gh pr diff` / `gh pr checks` | Inspect pull requests |
+| `gh issue list` / `gh issue view` | Inspect issues |
+| `gh run list` / `gh run view` / `gh workflow list` | Inspect CI runs and workflows |
+| `gh api <endpoint>` with no `-X` / `--method`, or `--method GET` | Read the GitHub API |
+| `gh auth status` | Report which account is authenticated |
 
 ---
 
@@ -77,6 +91,24 @@ If the user asks the agent to perform one of these operations, the agent must te
 
 **No indirect execution.** The agent must not perform a forbidden operation indirectly — for example through a shell script, an alias, a Makefile target, an npm script, a CI trigger, or a GUI automation. If the underlying effect is a forbidden operation, the wrapper is forbidden too.
 
+### GitHub CLI (`gh`) — anything that changes remote state
+
+`gh` reaches the same remote as `git push`, and some of it reaches further: repository settings, published releases, and other people's notifications. The agent proposes; the user runs.
+
+| Command | Why it is forbidden |
+| --- | --- |
+| `gh repo create` / `gh repo delete` / `gh repo edit` | Creates, destroys or reconfigures a repository, including its visibility |
+| `gh release create` / `gh release edit` / `gh release delete` / `gh release upload` | Publishes or rewrites what other people download |
+| `gh pr create` / `gh pr merge` / `gh pr close` / `gh pr review` / `gh pr comment` | Publishes content under the user's name, and can merge code |
+| `gh issue create` / `gh issue close` / `gh issue edit` / `gh issue comment` | Publishes content under the user's name and notifies others |
+| `gh workflow run` / `gh run cancel` / `gh run rerun` | Triggers or stops CI, which may deploy |
+| `gh secret set` / `gh variable set` / `gh ssh-key add` / `gh gpg-key add` | Changes credentials and repository configuration |
+| `gh auth login` / `gh auth logout` / `gh auth refresh` | Changes which account the machine acts as, and with which scopes |
+| `gh api` with `--method` other than GET, or writing fields to an endpoint | The same mutations under another name |
+| `gh gist create` / `gh gist edit` / `gh gist delete` | Publishes content, often publicly |
+
+**Treat every `gh` write as irreversible.** A release, a comment or a repository's visibility can be changed back, but anyone who already read it has read it, search engines may have indexed it, and GitHub keeps unreachable objects addressable long after a force-push. "It can be edited afterwards" is not a reason to run it.
+
 ---
 
 ## Category 3 — Allowed Only With an Explicit User Command
@@ -105,6 +137,17 @@ An instruction is explicit only if the user directly names the action in the cur
 
 Permission is **per-task, not standing**. A user command to resolve one conflict does not authorize resolving future conflicts automatically.
 
+### Waiver by explicit user instruction
+
+Category 2 is the default, not an absolute. The user may lift it for one occasion by saying so in that message — "commit and push this yourself", "publish the release", "skip the restrictions this time". When they do:
+
+- Perform only the operations that instruction names, in the repository it concerns. A waiver to commit is not a waiver to push, unless the instruction says both.
+- **Deletion stays with the user regardless.** Files, branches, tags, refs, unreachable objects, releases, repositories: under a waiver the agent still only describes what needs deleting and gives the exact command.
+- Report what was actually run, with its real output. A waiver does not relax the reporting rules below.
+- The waiver expires with the task that used it. A later request — same conversation or not — starts from Category 2 again.
+
+A vague instruction is not a waiver. "Sync it", "handle it", "make it work" and "clean this up" leave Category 2 fully in force.
+
 ---
 
 ## Commit Message Rules
@@ -120,12 +163,13 @@ These rules apply whenever the agent is asked to write, draft, or suggest a comm
 - The commit message must describe **the change itself**: what changed and why, written as if by the repository's human author. Authorship metadata is git's concern (`user.name` / `user.email`), configured by the user — never something the agent injects into the message body.
 - If the user's own commit template or convention (e.g. Conventional Commits) is known, follow it; otherwise write a concise imperative subject line, with an optional body explaining the why.
 
-When the agent is about to run any git command, it must walk through this checklist:
+When the agent is about to run any git or `gh` command, it must walk through this checklist:
 
 1. **Is the command purely read-only (Category 1)?** → Run it.
 2. **Is the command in the forbidden list (Category 2)?** → Do not run it. Tell the user what command they need to run themselves and why.
 3. **Is it conflict resolution explicitly commanded by the user in this conversation (Category 3)?** → Perform only the scoped steps listed there, then stop and report.
-4. **Is the command not covered by this document?** → Treat it as forbidden. Explain the situation to the user and ask how they want to proceed.
+4. **Did the user waive the restriction in this message, naming the operation?** → Run exactly what was named, never a deletion, then report what ran.
+5. **Is the command not covered by this document?** → Treat it as forbidden. Explain the situation to the user and ask how they want to proceed.
 
 ---
 
@@ -149,3 +193,6 @@ When the agent is about to run any git command, it must walk through this checkl
 | Ref/config mutation | branch/tag create-delete, `remote`, `config` writes | Never — user only |
 | Conflict resolution | editing conflicted files, `git add` on those files | Only on explicit user command, scoped, then stop |
 | Commit message drafting | writing/suggesting a commit message as text | Yes on request — but never with agent attribution (no AI `Co-Authored-By`, no "Generated with" footers) |
+| GitHub CLI reads | `gh repo view`, `gh pr list`, `gh api` without a method | Yes, always |
+| GitHub CLI writes | `gh release create`, `gh repo edit`, `gh pr merge`, `gh workflow run` | Never — user only, unless waived for that one occasion |
+| Deleting anything | files, branches, tags, releases, repositories | Never — user only, waiver or not |
